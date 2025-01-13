@@ -1,0 +1,94 @@
+---
+title: "PA1_template.Rmd"
+author: "Simon"
+date: "2025-01-13"
+output: html_document
+---
+
+Overview of Dataset
+
+```{r}
+# Load necessary libraries
+library(ggplot2)
+
+# Load the data
+activity <- read.csv("activity.csv")
+
+# Convert date column to Date format
+activity$date <- as.Date(activity$date)
+
+# Inspect the data
+head(activity)
+```
+
+Mean total of steps taken
+
+```{r}
+# Calculate total steps per day
+total_steps_per_day <- aggregate(steps ~ date, data = activity, sum, na.rm = TRUE)
+
+# Plot histogram
+ggplot(total_steps_per_day, aes(x = steps)) +
+  geom_histogram(binwidth = 1000, fill = "blue", color = "black") +
+  labs(title = "Total Steps Per Day", x = "Steps", y = "Frequency")
+
+# Calculate mean and median
+mean_steps <- mean(total_steps_per_day$steps, na.rm = TRUE)
+median_steps <- median(total_steps_per_day$steps, na.rm = TRUE)
+
+mean_steps
+median_steps
+```
+
+Average Daily Activity Pattern
+
+```{r}
+# Average steps per interval
+avg_steps_per_interval <- aggregate(steps ~ interval, data = activity, mean, na.rm = TRUE)
+
+# Plot time series
+ggplot(avg_steps_per_interval, aes(x = interval, y = steps)) +
+  geom_line(color = "red") +
+  labs(title = "Average Daily Activity Pattern", x = "Interval", y = "Average Steps")
+
+# Identify interval with maximum steps
+max_interval <- avg_steps_per_interval[which.max(avg_steps_per_interval$steps), ]
+max_interval
+```
+
+Input Missing Values
+
+```{r}
+
+# Count missing values
+num_missing <- sum(is.na(activity$steps))
+
+# Impute missing values
+imputed_activity <- activity
+imputed_activity$steps[is.na(imputed_activity$steps)] <- 
+  with(activity, ave(steps, interval, FUN = function(x) mean(x, na.rm = TRUE)))
+
+# Repeat histogram and summary stats
+imputed_total_steps_per_day <- aggregate(steps ~ date, data = imputed_activity, sum)
+mean_imputed_steps <- mean(imputed_total_steps_per_day$steps)
+median_imputed_steps <- median(imputed_total_steps_per_day$steps)
+
+mean_imputed_steps
+median_imputed_steps
+```
+
+Weekday vs. weekend Activity
+
+```{r}
+# Add weekday/weekend variable
+imputed_activity$day_type <- ifelse(weekdays(imputed_activity$date) %in% c("Saturday", "Sunday"), "weekend", "weekday")
+
+# Average steps per interval by day type
+avg_steps_day_type <- aggregate(steps ~ interval + day_type, data = imputed_activity, mean)
+
+# Plot panel
+library(lattice)
+xyplot(steps ~ interval | day_type, data = avg_steps_day_type, type = "l", layout = c(1, 2),
+       main = "Activity Patterns: Weekday vs. Weekend", xlab = "Interval", ylab = "Average Steps")
+```
+
